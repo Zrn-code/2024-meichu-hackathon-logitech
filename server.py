@@ -18,7 +18,7 @@ SKETCH_DIR = os.getenv('SKETCH_DIR')
 RESULT_DIR = os.getenv('RESULT_DIR')
 FINAL_RESULT_DIR = os.getenv('FINAL_RESULT_DIR')
 
-# 確認資料夾存在，如果不存在則創建
+
 os.makedirs(BACKGROUND_DIR, exist_ok=True)
 os.makedirs(SKETCH_DIR, exist_ok=True)
 os.makedirs(RESULT_DIR, exist_ok=True)
