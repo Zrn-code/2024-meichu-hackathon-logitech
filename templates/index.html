@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload Images</title>
+  </head>
+  <body>
+    <h1>Upload Two Images</h1>
+    <form id="upload-form">
+      <label for="image1">Image 1 (Background):</label>
+      <input type="file" id="image1" accept="image/*" /><br /><br />
+
+      <label for="image2">Image 2 (Sketch):</label>
+      <input type="file" id="image2" accept="image/*" /><br /><br />
+
+      <button type="submit">Upload</button>
+    </form>
+
+    <p id="response"></p>
+    <div id="preview-container"></div>
+    <div id="result-container"></div>
+
+    <script>
+      document
+        .getElementById("upload-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const image1 = document.getElementById("image1").files[0];
+          const image2 = document.getElementById("image2").files[0];
+
+          if (!image1 || !image2) {
+            alert("Please select both images.");
+            return;
+          }
+
+          // Convert files to base64
+          const toBase64 = (file) =>
+            new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve(reader.result.split(",")[1]); // remove data:image/png;base64, prefix
+              reader.onerror = (error) => reject(error);
+            });
+
+          const image1Base64 = await toBase64(image1);
+          const image2Base64 = await toBase64(image2);
+
+          // Send POST request to upload images
+          const response = await fetch("/upload", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              background: image1Base64,
+              sketch: image2Base64,
+            }),
+          });
+
+          const result = await response.json();
+
+          // Display the response values
+          const { sketch_id, sketch, background_id, background } = result;
+          document.getElementById("response").innerText = `
+            Sketch ID: ${sketch_id}\n
+            Sketch: ${sketch}\n
+            Background ID: ${background_id}\n
+            Background: ${background}
+          `;
+
+          // Create "Generate Preview" button dynamically
+          const previewContainer = document.getElementById("preview-container");
+          previewContainer.innerHTML = ""; // Clear previous button if any
+          const previewButton = document.createElement("button");
+          previewButton.innerText = "Generate Preview";
+          previewButton.addEventListener("click", async () => {
+            const previewResponse = await fetch("/generate-preview", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                background_id: background_id,
+                sketch_id: sketch_id,
+              }),
+            });
+
+            const previewResult = await previewResponse.json();
+
+            // Display the result values
+            const { result_id, result } = previewResult;
+            const resultContainer = document.getElementById("result-container");
+            resultContainer.innerHTML = `
+              <p>Result ID: ${result_id}</p>
+              <img src="data:image/png;base64,${result}" alt="Generated Preview" />
+            `;
+          });
+
+          previewContainer.appendChild(previewButton);
+        });
+    </script>
+  </body>
+</html>
