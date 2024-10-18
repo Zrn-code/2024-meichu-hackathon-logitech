@@ -6,7 +6,7 @@ import base64
 from dotenv import load_dotenv
 from api.TextGenAPI import background_to_text,sketch_to_text
 from api.ImgGenAPI import sketch_to_image
-from api.ModelGenAPI import image_to_3d_tripo
+from api.ModelGenAPI import image_to_3d_tripo,download_result
 from basicFunction import get_id,encode_image,read_image_by_id_b64
 
 app = Flask(__name__)
@@ -28,6 +28,11 @@ os.makedirs(FINAL_RESULT_DIR, exist_ok=True)
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/display')
+def display():
+    return render_template('display.html')  
+
 
 @app.route('/upload', methods=['POST'])
 def upload_images():
@@ -71,7 +76,6 @@ def upload_sketch():
     sketch = Image.open(io.BytesIO(image_data))
     sketch.thumbnail((800, 800))
 
-    
     sketch_id = get_id()
     sketch_filename = f"{sketch_id}.png"
     sketch.save(os.path.join(SKETCH_DIR, sketch_filename)) 
@@ -84,13 +88,13 @@ def upload_sketch():
     
     return jsonify(response)
 
-
 @app.route('/generate-preview', methods=['POST'])
 def generate_preview():
     data = request.get_json()
     background_id = data['background_id']
     sketch_id = data['sketch_id']
-    result = sketch_to_image(background_id,sketch_id)
+    strength = float(data['strength'])
+    result = sketch_to_image(background_id,sketch_id,strength)
     return jsonify(result)
 
 @app.route('/generate-3d-tripo', methods=['POST'])
@@ -130,7 +134,17 @@ def show_sketch(sketch_id):
     sketch = read_image_by_id_b64(sketch_id,'sketch')
     return jsonify(sketch)
 
+@app.route('/show-result/<result_id>', methods=['GET'])
+def show_result(result_id):
+    result = read_image_by_id_b64(result_id,'result')
+    return jsonify(result)
+
+@app.route('/show-final-result/<final_result_id>', methods=['GET'])
+def show_final_result(final_result_id):
+    final_result = read_image_by_id_b64(final_result_id,'final_result')
+    return jsonify(final_result)
 
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000,debug=True)
+    

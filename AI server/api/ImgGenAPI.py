@@ -1,4 +1,5 @@
 import os
+import random
 import requests
 from .TextGenAPI import background_to_text, sketch_to_text
 from basicFunction import get_id, encode_image, read_image_by_id_b64
@@ -7,7 +8,7 @@ from basicFunction import get_id, encode_image, read_image_by_id_b64
 
 stability_api_key = os.getenv('STABILITY_AI_API_KEY')
 
-def sketch_to_image(background_id,sketch_id):
+def sketch_to_image(background_id,sketch_id,strength=0.5):
     
     background_info = background_to_text(read_image_by_id_b64(background_id,'background'))
     sketch_info = sketch_to_text(read_image_by_id_b64(sketch_id,'sketch'))
@@ -25,7 +26,7 @@ def sketch_to_image(background_id,sketch_id):
         },
         data={
             "prompt": f"{prompt}",
-            "control_strength": 0.5,
+            "control_strength": strength,
             "output_format": "png"
         },
     )

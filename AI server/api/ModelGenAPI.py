@@ -1,7 +1,8 @@
 import os
 import requests
 import wget
-import datetime
+import time
+from basicFunction import get_id
 
 tripo3d_api_key = os.getenv('TRIPO3D_API_KEY')
 
@@ -46,25 +47,27 @@ def download_result(task_id):
     url = f"https://api.tripo3d.ai/v2/openapi/task/{task_id}"
     headers = {"Authorization": f"Bearer {tripo3d_api_key}"}
 
-    response = requests.get(url, headers=headers)
+    while True:
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json().get("data", {})
+            output = data.get("output")
+            print(f"Output data received: {output}")
 
-    if response.status_code == 200:
-        data = response.json().get("data", {})
-        output = data.get("output")
-        print(f"Output data received: {output}")  
-
-        if output:
-            folder_name = datetime.now().strftime("%y%m%d_%H_%M_%S")
-            os.makedirs(folder_name, exist_ok=True)
-            model_url = output.get("pbr_model")
-            if model_url:
-                static_model_filename = os.path.join(folder_name, "model.glb")
-                wget.download(model_url, static_model_filename)
-                print(f"Static model downloaded to {static_model_filename}")
+            if output:
+                model_url = output.get("pbr_model")
+                if model_url:
+                    final_result_id = get_id()
+                    static_model_filename = os.path.join(os.getenv('FINAL_RESULT_DIR'), f"{final_result_id}.glb")
+                    wget.download(model_url, static_model_filename)
+                    print(f"Static model downloaded to {static_model_filename}")
+                    return final_result_id
+            else:
+                print("Error: No output data found for the task.")
         else:
-            print("Error: No output data found for the task.")
-    else:
-        print("Error:", response.text)    
+            print("Error:", response.text)    
+        time.sleep(2)
 
 
 
