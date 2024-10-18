@@ -10,4 +10,5 @@
 *.svg
 *.glb
 
-/data
+**/data
+**/node_modules/
