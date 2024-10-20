@@ -56,11 +56,11 @@ const Card = ({ id, type, onClick }) => {
 };
 
 function Home() {
-  const navigate = useNavigate(); // 创建 navigate 实例
-  const filteredData = rawData.filter((item) => item.model_id);
+  const navigate = useNavigate();
+  const filteredData = rawData.filter((item) => item.model_id).reverse();
 
   const handleSketchClick = (id) => {
-    navigate(`/${id}`); // 使用 navigate 跳转到对应 ID 的页面
+    navigate(`/${id}`);
   };
 
   return (
@@ -76,7 +76,7 @@ function Home() {
                   key={item.sketch_id}
                   id={item.sketch_id}
                   type="Sketch"
-                  onClick={() => handleSketchClick(item.sketch_id)} // 點擊處理函數
+                  onClick={() => handleSketchClick(item.sketch_id)}
                 />
               </div>
             )

@@ -1,5 +1,5 @@
 import React from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 import "./styles.css";
 import * as THREE from "three";
@@ -79,7 +79,7 @@ const Card = ({ id, type, onClick }) => {
 
 export default function Preview() {
   const { id } = useParams();
-
+  const navigate = useNavigate();
   // 使用 findIndex 查找對應的索引
   const modelIndex = filteredData.findIndex((item) => item.sketch_id === id);
 
@@ -132,7 +132,7 @@ export default function Preview() {
       <h2 className="text-2xl font-bold mb-4 text-white">{getTitle()}</h2>
       <div
         className={`relative w-5/6 ${
-          type === "Model" ? "h-3/5" : "h-auto"
+          type === "Model" ? "h-3/5 lg:h-1/2" : "h-auto"
         } border-4 rounded border-black m-5`}
       >
         {type === "Model" ? (
@@ -157,28 +157,43 @@ export default function Preview() {
             type={type}
           />
         )}
+        <button
+          className="absolute bottom-2 left-2 p-2 bg-red-500 text-white rounded"
+          onClick={() => navigate("/")}
+        >
+          Back to Gallery
+        </button>
       </div>
 
       <div className="flex space-x-4 mt-5">
-        {/* 當 type 是 Sketch 時，不顯示 Prev Type 按鈕 */}
+        {/* Prev Type 按鈕的動態文字 */}
         {type !== "Sketch" && (
           <button
             className="p-2 bg-blue-500 text-white rounded"
             onClick={handlePreviousType}
           >
-            上一個型別
+            {type === "Background"
+              ? "Sketch"
+              : type === "Result"
+              ? "Background"
+              : "Image Result"}
           </button>
         )}
 
-        {/* 當 type 是 Model 時，不顯示 Next Type 按鈕 */}
+        {/* Next Type 按鈕的動態文字 */}
         {type !== "Model" && (
           <button
             className="p-2 bg-blue-500 text-white rounded"
             onClick={handleNextType}
           >
-            下一個型別
+            {type === "Sketch"
+              ? "Background"
+              : type === "Background"
+              ? "Image Result"
+              : "Model"}
           </button>
         )}
+
         {type === "Model" && (
           <button
             className="p-2 bg-green-500 text-white rounded "
