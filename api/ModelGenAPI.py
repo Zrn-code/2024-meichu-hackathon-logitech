@@ -2,7 +2,7 @@ import os
 import requests
 import wget
 import time
-from basicFunction import get_id
+from basicFunction import get_id, encode_image
 
 tripo3d_api_key = os.getenv('TRIPO3D_API_KEY')
 
@@ -37,10 +37,33 @@ def image_to_3d_tripo(result_id):
     }
 
     response = requests.post(url, headers=headers, json=data)
+    task_id = response.json().get("data", {}).get("task_id")
+    
+    url = f"https://api.tripo3d.ai/v2/openapi/task/{task_id}"
+    headers = {"Authorization": f"Bearer {tripo3d_api_key}"}
 
-    print(response.json())
-    response = response.json()
-    return response
+    while True:
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json().get("data", {})
+            output = data.get("output")
+            print(f"Output data received: {output}")
+
+            if output:
+                model_url = output.get("pbr_model")
+                if model_url:
+                    final_result_id = get_id()
+                    static_model_filename = os.path.join(os.getenv('FINAL_RESULT_DIR'), f"{final_result_id}.glb")
+                    wget.download(model_url, static_model_filename)
+                    print(f"Static model downloaded to {static_model_filename}")
+                    return final_result_id
+            else:
+                print("Error: No output data found for the task.")
+        else:
+            print("Error:", response.text)    
+        time.sleep(1)
+    
 
 
 def download_result(task_id):
@@ -67,7 +90,7 @@ def download_result(task_id):
                 print("Error: No output data found for the task.")
         else:
             print("Error:", response.text)    
-        time.sleep(2)
+        time.sleep(1)
 
 
 

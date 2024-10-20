@@ -3,28 +3,36 @@ from PIL import Image
 import os
 import io
 import base64
+import json
 from dotenv import load_dotenv
 from api.TextGenAPI import background_to_text,sketch_to_text
 from api.ImgGenAPI import sketch_to_image
 from api.ModelGenAPI import image_to_3d_tripo,download_result
-from basicFunction import get_id,encode_image,read_image_by_id_b64
+from basicFunction import get_id,encode_image,read_image_by_id_b64,save_scene_to_obj
+import threading
 
 app = Flask(__name__)
 
 load_dotenv()
 
+data_file = './gallery/src/generated_data.json'
+
+if not os.path.exists(data_file):
+    with open(data_file, 'w') as f:
+        json.dump([], f)
+
 BACKGROUND_DIR = os.getenv('BACKGROUND_DIR')
 SKETCH_DIR = os.getenv('SKETCH_DIR')
 RESULT_DIR = os.getenv('RESULT_DIR')
 FINAL_RESULT_DIR = os.getenv('FINAL_RESULT_DIR')
-
+OBJ_DIR = os.getenv('OBJ_DIR')
 
 os.makedirs(BACKGROUND_DIR, exist_ok=True)
 os.makedirs(SKETCH_DIR, exist_ok=True)
 os.makedirs(RESULT_DIR, exist_ok=True)
 os.makedirs(FINAL_RESULT_DIR, exist_ok=True)
-    
-        
+os.makedirs(OBJ_DIR, exist_ok=True)
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -91,18 +99,47 @@ def upload_sketch():
 @app.route('/generate-preview', methods=['POST'])
 def generate_preview():
     data = request.get_json()
-    background_id = data['background_id']
-    sketch_id = data['sketch_id']
-    strength = float(data['strength'])
-    result = sketch_to_image(background_id,sketch_id,strength)
+    background_id = data.get('background_id')
+    sketch_id = data.get('sketch_id')
+    prompt = data.get('prompt')
+    if data.get('strength'):
+        strength = float(data.get('strength'))
+    else:
+        strength = 0.5
+    result = sketch_to_image(background_id,sketch_id,prompt,strength)
+    result_id = result['result_id']
+    with open(data_file, 'r+') as f:
+        data = json.load(f)
+        new_entry = {
+            'result_id': result_id,
+            'sketch_id': sketch_id,
+            'background_id': background_id,
+            'model_id': None 
+        }
+        data.append(new_entry)
+        f.seek(0)
+        json.dump(data, f, indent=4)
+    
     return jsonify(result)
 
 @app.route('/generate-3d-tripo', methods=['POST'])
 def generate_3d_tripo():
     data = request.get_json()
+    print(data)
     result_id = data['result_id']
-    result = image_to_3d_tripo(result_id)
-    return jsonify(result)
+    final_result_id = image_to_3d_tripo(result_id)
+    thread = threading.Thread(target=save_scene_to_obj,args=(final_result_id,))
+    thread.start()
+    model = encode_image(os.path.join(FINAL_RESULT_DIR, f"{final_result_id}.glb"))
+    with open(data_file, 'r+') as f:
+        data = json.load(f)
+        for entry in data:
+            if entry['result_id'] == result_id:
+                entry['model_id'] = final_result_id
+                break
+        f.seek(0)
+        json.dump(data, f, indent=4)
+    return jsonify(model)
 
 @app.route('/show-background-ids', methods=['GET'])
 def show_background_ids():
@@ -144,7 +181,18 @@ def show_final_result(final_result_id):
     final_result = read_image_by_id_b64(final_result_id,'final_result')
     return jsonify(final_result)
 
+@app.route('/find-preview/<final_result_id>',methods = ['GET'])
+def find_preview(final_result_id):
+    with open('./gallery/src/generated_data.json','r', encoding='utf-8') as file:
+        data = json.load(file)
+    response = {}
+    for entry in data:
+        if entry['model_id'] == final_result_id:
+            response['result_id'] = entry['result_id']
+            response['background_id'] = entry['background_id']
+            response['sketch_id'] = entry['sketch_id']
+    return jsonify(response)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000,debug=True)
+    app.run(host='0.0.0.0', port=5183,debug=True)
     
